@@ -7,7 +7,9 @@ import {
   Transaction, 
   Loan, 
   AuditLog, 
-  BusinessSettings 
+  BusinessSettings,
+  DigitalPlatform,
+  PlatformTransaction,
 } from '../types';
 
 export const INITIAL_USERS: UserProfile[] = [
@@ -401,3 +403,61 @@ export const INITIAL_AUDIT_LOGS: AuditLog[] = [
     createdAt: `${TODAY_STR}T09:00:00.000Z`,
   },
 ];
+
+export const INITIAL_PLATFORMS: DigitalPlatform[] = [
+  {
+    id: 'plat-ptm',
+    name: 'PTM',
+    code: 'ptm',
+    accountNumber: 'PTM-849201',
+    currentBalance: 1250000,
+    initialBalance: 1250000,
+    color: '#0284c7', // Sky-600
+    description: 'Plataforma Tecnológica Multiservicios (Recargas, pines, apuestas, certificados)',
+    isActive: true,
+    lastUpdated: `${TODAY_STR}T08:00:00.000Z`,
+    createdAt: '2026-08-01T00:00:00.000Z',
+  },
+  {
+    id: 'plat-bemovil',
+    name: 'Bemovil',
+    code: 'bemovil',
+    accountNumber: 'BM-592810',
+    currentBalance: 820000,
+    initialBalance: 820000,
+    color: '#059669', // Emerald-600
+    description: 'Recargas a todos los operadores, paquetes prepago, recaudo y giros',
+    isActive: true,
+    lastUpdated: `${TODAY_STR}T08:00:00.000Z`,
+    createdAt: '2026-08-01T00:00:00.000Z',
+  },
+  {
+    id: 'plat-punto-pago',
+    name: 'Punto de Pago',
+    code: 'punto_pago',
+    accountNumber: 'PDP-103948',
+    currentBalance: 1540000,
+    initialBalance: 1540000,
+    color: '#d97706', // Amber-600
+    description: 'Pasarela de recaudos de servicios públicos, convenios municipales y facturación',
+    isActive: true,
+    lastUpdated: `${TODAY_STR}T08:00:00.000Z`,
+    createdAt: '2026-08-01T00:00:00.000Z',
+  },
+];
+
+export const INITIAL_PLATFORM_TRANSACTIONS: PlatformTransaction[] = [
+  {
+    id: 'ptx-1',
+    platformId: 'plat-ptm',
+    platformName: 'PTM',
+    type: 'carga_desde_caja',
+    amount: 500000,
+    description: 'Recarga de cupo de saldo en plataforma PTM para inicio de mes',
+    reference: 'REF-PTM-001',
+    userId: 'usr-admin-1',
+    userName: 'Carlos Mendoza (Admin)',
+    createdAt: `${TODAY_STR}T08:05:00.000Z`,
+  },
+];
+

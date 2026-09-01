@@ -13,6 +13,8 @@ import {
   UserRole,
   TransactionType,
   PaymentMethodCode,
+  DigitalPlatform,
+  PlatformTransaction,
 } from '../types';
 import {
   INITIAL_USERS,
@@ -24,6 +26,8 @@ import {
   INITIAL_LOANS,
   INITIAL_TRANSACTIONS,
   INITIAL_AUDIT_LOGS,
+  INITIAL_PLATFORMS,
+  INITIAL_PLATFORM_TRANSACTIONS,
 } from '../data/initialData';
 import { calculateExpectedCash, calculateOperatingProfit, calculateLoansMetrics, FinancialSummary } from '../utils/calculations';
 
@@ -35,13 +39,20 @@ interface ToastMessage {
 }
 
 interface AppContextType {
+  // Authentication
+  isAuthenticated: boolean;
+  login: (emailOrUsername: string, password?: string) => Promise<boolean>;
+  logout: () => void;
   currentUser: UserProfile;
   setCurrentUser: (user: UserProfile) => void;
   switchUserRole: (role: UserRole) => void;
   users: UserProfile[];
+
   services: ServiceItem[];
   categories: CategoryItem[];
   paymentMethods: PaymentMethodItem[];
+  platforms: DigitalPlatform[];
+  platformTransactions: PlatformTransaction[];
   cashRegisters: CashRegister[];
   currentRegister: CashRegister | null;
   transactions: Transaction[];
@@ -66,6 +77,7 @@ interface AppContextType {
     description: string;
     serviceId?: string;
     categoryId?: string;
+    platformId?: string;
     reference?: string;
     customerOrProvider?: string;
     loanId?: string;
@@ -96,10 +108,26 @@ interface AppContextType {
   updateService: (id: string, updates: Partial<ServiceItem>) => void;
   deleteService: (id: string) => void;
   toggleServiceActive: (id: string) => void;
+
+  // Digital Platforms (PTM, Bemovil, Punto de Pago, etc.)
+  addPlatform: (platform: Omit<DigitalPlatform, 'id' | 'lastUpdated' | 'createdAt'>) => void;
+  updatePlatform: (id: string, updates: Partial<DigitalPlatform>) => void;
+  deletePlatform: (id: string) => void;
+  togglePlatformActive: (id: string) => void;
+  adjustPlatformBalance: (platformId: string, newBalance: number, reason: string) => Promise<boolean>;
+  transferBetweenCashAndPlatform: (params: {
+    platformId: string;
+    amount: number;
+    direction: 'cash_to_platform' | 'platform_to_cash';
+    description?: string;
+    reference?: string;
+  }) => Promise<boolean>;
+
   setInitialCashBalance: (params: {
     amount: number;
     mode?: 'set_base' | 'adjust_capital';
     reason?: string;
+    platformBalances?: { platformId: string; balance: number }[];
   }) => Promise<boolean>;
   
   addCategory: (category: Omit<CategoryItem, 'id' | 'createdAt'>) => void;
@@ -118,9 +146,12 @@ interface AppContextType {
 const STORAGE_KEYS = {
   USERS: 'ppe_users_v1',
   CURRENT_USER: 'ppe_current_user_v1',
+  AUTH_SESSION: 'ppe_auth_session_v1',
   SERVICES: 'ppe_services_v1',
   CATEGORIES: 'ppe_categories_v1',
   PAYMENT_METHODS: 'ppe_payment_methods_v1',
+  PLATFORMS: 'ppe_platforms_v1',
+  PLATFORM_TXS: 'ppe_platform_txs_v1',
   CASH_REGISTERS: 'ppe_cash_registers_v1',
   TRANSACTIONS: 'ppe_transactions_v1',
   LOANS: 'ppe_loans_v1',
@@ -132,6 +163,11 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Load saved state or fall back to Initial Seed Data
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.AUTH_SESSION);
+    return saved !== null ? saved === 'true' : true; // Default to true so user sees active state, but can logout and login
+  });
+
   const [users, setUsers] = useState<UserProfile[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USERS);
     return saved ? JSON.parse(saved) : INITIAL_USERS;
@@ -145,6 +181,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [services, setServices] = useState<ServiceItem[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SERVICES);
     return saved ? JSON.parse(saved) : INITIAL_SERVICES;
+  });
+
+  const [platforms, setPlatforms] = useState<DigitalPlatform[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PLATFORMS);
+    return saved ? JSON.parse(saved) : INITIAL_PLATFORMS;
+  });
+
+  const [platformTransactions, setPlatformTransactions] = useState<PlatformTransaction[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.PLATFORM_TXS);
+    return saved ? JSON.parse(saved) : INITIAL_PLATFORM_TRANSACTIONS;
   });
 
   const [categories, setCategories] = useState<CategoryItem[]>(() => {
@@ -187,6 +233,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // Sync to local storage
   useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.AUTH_SESSION, isAuthenticated.toString());
+  }, [isAuthenticated]);
+
+  useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
   }, [users]);
 
@@ -197,6 +247,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SERVICES, JSON.stringify(services));
   }, [services]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PLATFORMS, JSON.stringify(platforms));
+  }, [platforms]);
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.PLATFORM_TXS, JSON.stringify(platformTransactions));
+  }, [platformTransactions]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
@@ -234,6 +292,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
+
+  // Login & Logout
+  const login = async (emailOrUsername: string, password?: string): Promise<boolean> => {
+    setIsProcessing(true);
+    try {
+      const cleanInput = emailOrUsername.trim().toLowerCase();
+      // Match with known users or demo profiles
+      const matched = users.find(
+        (u) =>
+          u.email.toLowerCase() === cleanInput ||
+          u.name.toLowerCase().includes(cleanInput) ||
+          (cleanInput === 'admin' && u.role === 'admin') ||
+          (cleanInput === 'cajero' && u.role === 'cajero')
+      );
+
+      if (matched) {
+        setCurrentUser(matched);
+      } else {
+        // Create quick guest profile with role based on input
+        const role: UserRole = cleanInput.includes('admin') ? 'admin' : 'cajero';
+        const newUsr: UserProfile = {
+          id: `usr-${Date.now()}`,
+          name: emailOrUsername.split('@')[0],
+          email: emailOrUsername.includes('@') ? emailOrUsername : `${emailOrUsername}@puntoexpress.co`,
+          role,
+          isActive: true,
+          createdAt: new Date().toISOString(),
+        };
+        setUsers((prev) => [newUsr, ...prev]);
+        setCurrentUser(newUsr);
+      }
+
+      setIsAuthenticated(true);
+      addToast('success', 'Sesión iniciada', `Bienvenido al sistema Punto de Pago Express.`);
+      return true;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const logout = () => {
+    setIsAuthenticated(false);
+    addToast('info', 'Sesión finalizada', 'Has cerrado la sesión correctamente.');
+  };
 
   // Current Open Cash Register
   const currentRegister = useMemo(() => {
@@ -287,9 +389,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const variation = currentCash - initial;
     const variationPct = initial > 0 ? (variation / initial) * 100 : 0;
 
+    // Platform balances (PTM, Bemovil, Punto de Pago, etc.)
+    const totalPlatformsBalance = platforms
+      .filter((p) => p.isActive)
+      .reduce((sum, p) => sum + (p.currentBalance || 0), 0);
+
+    const totalGlobalLiquidity = currentCash + totalPlatformsBalance;
+
     return {
       availableLiquidity: currentCash,
       expectedCashInRegister: currentCash,
+      totalPlatformsBalance,
+      totalGlobalLiquidity,
       todayIncomes,
       todayExpenses,
       todayOperatingProfit,
@@ -301,7 +412,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       liquidityVariationPercentage: variationPct,
       openRegister: currentRegister,
     };
-  }, [transactions, loans, currentRegister, liveExpectedBalance]);
+  }, [transactions, loans, currentRegister, liveExpectedBalance, platforms]);
 
   // Switch role seamlessly for testing
   const switchUserRole = useCallback((role: UserRole) => {
@@ -471,6 +582,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     description: string;
     serviceId?: string;
     categoryId?: string;
+    platformId?: string;
     reference?: string;
     customerOrProvider?: string;
     loanId?: string;
@@ -495,6 +607,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const pm = paymentMethods.find((p) => p.code === params.paymentMethodCode);
       const serv = services.find((s) => s.id === params.serviceId);
       const cat = categories.find((c) => c.id === params.categoryId);
+      const plat = platforms.find((p) => p.id === params.platformId);
 
       const newTx: Transaction = {
         id: `tx-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
@@ -504,6 +617,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         serviceName: serv?.name,
         categoryId: params.categoryId,
         categoryName: cat?.name,
+        platformId: params.platformId,
+        platformName: plat?.name,
         description: params.description.trim(),
         amount: Math.round(params.amount),
         paymentMethodCode: params.paymentMethodCode,
@@ -792,11 +907,222 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('info', 'Estado Actualizado', `Servicio ${s.name} ${newState ? 'activado' : 'desactivado'}`);
   };
 
-  // Set / Mount Initial Cash Balance
+  // Digital Platforms (PTM, Bemovil, Punto de Pago, and custom ones)
+  const addPlatform = (platform: Omit<DigitalPlatform, 'id' | 'lastUpdated' | 'createdAt'>) => {
+    const newPlat: DigitalPlatform = {
+      ...platform,
+      id: `plat-${Date.now()}`,
+      initialBalance: platform.currentBalance || 0,
+      lastUpdated: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+    };
+    setPlatforms((prev) => [...prev, newPlat]);
+    logAudit('create', 'platform', newPlat.id, `Nueva plataforma digital registrada: ${newPlat.name} con saldo $${newPlat.currentBalance.toLocaleString('es-CO')}`);
+    addToast('success', 'Plataforma Agregada', `Plataforma "${newPlat.name}" añadida con éxito.`);
+  };
+
+  const updatePlatform = (id: string, updates: Partial<DigitalPlatform>) => {
+    setPlatforms((prev) =>
+      prev.map((p) =>
+        p.id === id ? { ...p, ...updates, lastUpdated: new Date().toISOString() } : p
+      )
+    );
+    logAudit('update', 'platform', id, `Plataforma actualizada`);
+    addToast('success', 'Plataforma Actualizada', 'Los cambios en la plataforma fueron guardados.');
+  };
+
+  const deletePlatform = (id: string) => {
+    const p = platforms.find((item) => item.id === id);
+    if (!p) return;
+    setPlatforms((prev) => prev.filter((item) => item.id !== id));
+    logAudit('void', 'platform', id, `Plataforma eliminada: ${p.name}`);
+    addToast('info', 'Plataforma Eliminada', `La plataforma "${p.name}" fue eliminada.`);
+  };
+
+  const togglePlatformActive = (id: string) => {
+    const p = platforms.find((item) => item.id === id);
+    if (!p) return;
+    const newState = !p.isActive;
+    updatePlatform(id, { isActive: newState });
+    addToast('info', 'Estado de Plataforma', `Plataforma ${p.name} ${newState ? 'activada' : 'desactivada'}`);
+  };
+
+  const adjustPlatformBalance = async (platformId: string, newBalance: number, reason: string): Promise<boolean> => {
+    const p = platforms.find((item) => item.id === platformId);
+    if (!p) {
+      addToast('error', 'Error', 'Plataforma no encontrada');
+      return false;
+    }
+    const oldBalance = p.currentBalance;
+    const diff = newBalance - oldBalance;
+
+    setPlatforms((prev) =>
+      prev.map((item) =>
+        item.id === platformId
+          ? { ...item, currentBalance: newBalance, lastUpdated: new Date().toISOString() }
+          : item
+      )
+    );
+
+    const newTx: PlatformTransaction = {
+      id: `ptx-${Date.now()}`,
+      platformId,
+      platformName: p.name,
+      type: 'ajuste_directo',
+      amount: Math.abs(diff),
+      description: `Ajuste de saldo: ${reason} (Antes: $${oldBalance.toLocaleString('es-CO')} -> Ahora: $${newBalance.toLocaleString('es-CO')})`,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      createdAt: new Date().toISOString(),
+    };
+    setPlatformTransactions((prev) => [newTx, ...prev]);
+
+    logAudit(
+      'config_change',
+      'platform',
+      platformId,
+      `Ajuste de saldo en ${p.name}: de $${oldBalance.toLocaleString('es-CO')} a $${newBalance.toLocaleString('es-CO')}. Motivo: ${reason}`
+    );
+
+    addToast('success', 'Saldo Actualizado', `Saldo de ${p.name} actualizado a $${newBalance.toLocaleString('es-CO')}.`);
+    return true;
+  };
+
+  const transferBetweenCashAndPlatform = async (params: {
+    platformId: string;
+    amount: number;
+    direction: 'cash_to_platform' | 'platform_to_cash';
+    description?: string;
+    reference?: string;
+  }): Promise<boolean> => {
+    if (params.amount <= 0 || isNaN(params.amount)) {
+      addToast('error', 'Monto inválido', 'El monto de transferencia debe ser mayor a 0.');
+      return false;
+    }
+
+    const platform = platforms.find((p) => p.id === params.platformId);
+    if (!platform) {
+      addToast('error', 'Error', 'Plataforma no encontrada.');
+      return false;
+    }
+
+    if (!currentRegister) {
+      addToast('error', 'Caja cerrada', 'Debes tener una caja abierta para transferir dinero con efectivo físico.');
+      return false;
+    }
+
+    setIsProcessing(true);
+    try {
+      if (params.direction === 'cash_to_platform') {
+        // Cash leaves drawer -> Platform gets credited
+        // Check if cash drawer has enough funds
+        if (liveExpectedBalance < params.amount) {
+          addToast('warning', 'Fondos insuficientes en caja', `La caja solo tiene $${liveExpectedBalance.toLocaleString('es-CO')} en efectivo.`);
+        }
+
+        // 1. Log Egreso from cash drawer
+        await createTransaction({
+          type: 'egreso',
+          amount: params.amount,
+          paymentMethodCode: 'efectivo',
+          description: `Carga de cupo a plataforma ${platform.name}: ${params.description || 'Recarga de saldo digital'}`,
+          reference: params.reference,
+          customerOrProvider: platform.name,
+          platformId: platform.id,
+        });
+
+        // 2. Increase platform balance
+        setPlatforms((prev) =>
+          prev.map((p) =>
+            p.id === platform.id
+              ? { ...p, currentBalance: p.currentBalance + params.amount, lastUpdated: new Date().toISOString() }
+              : p
+          )
+        );
+
+        // 3. Platform movement record
+        const ptx: PlatformTransaction = {
+          id: `ptx-${Date.now()}`,
+          platformId: platform.id,
+          platformName: platform.name,
+          type: 'carga_desde_caja',
+          amount: params.amount,
+          description: params.description || `Carga de saldo desde caja física (${currentRegister.id})`,
+          reference: params.reference,
+          cashRegisterId: currentRegister.id,
+          userId: currentUser.id,
+          userName: currentUser.name,
+          createdAt: new Date().toISOString(),
+        };
+        setPlatformTransactions((prev) => [ptx, ...prev]);
+
+        addToast(
+          'success',
+          'Recarga Exitosa',
+          `Se transfirieron $${params.amount.toLocaleString('es-CO')} de la caja física a ${platform.name}.`
+        );
+        return true;
+      } else {
+        // Platform gets debited -> Cash drawer receives money
+        if (platform.currentBalance < params.amount) {
+          addToast('error', 'Saldo insuficiente', `La plataforma ${platform.name} solo tiene $${platform.currentBalance.toLocaleString('es-CO')}.`);
+          return false;
+        }
+
+        // 1. Log Ingreso in cash drawer
+        await createTransaction({
+          type: 'ingreso',
+          amount: params.amount,
+          paymentMethodCode: 'efectivo',
+          description: `Descarga / Retiro de fondos de ${platform.name} a caja física: ${params.description || 'Descarga de saldo'}`,
+          reference: params.reference,
+          customerOrProvider: platform.name,
+          platformId: platform.id,
+        });
+
+        // 2. Decrease platform balance
+        setPlatforms((prev) =>
+          prev.map((p) =>
+            p.id === platform.id
+              ? { ...p, currentBalance: p.currentBalance - params.amount, lastUpdated: new Date().toISOString() }
+              : p
+          )
+        );
+
+        // 3. Platform movement record
+        const ptx: PlatformTransaction = {
+          id: `ptx-${Date.now()}`,
+          platformId: platform.id,
+          platformName: platform.name,
+          type: 'descarga_a_caja',
+          amount: params.amount,
+          description: params.description || `Descarga de fondos a caja física (${currentRegister.id})`,
+          reference: params.reference,
+          cashRegisterId: currentRegister.id,
+          userId: currentUser.id,
+          userName: currentUser.name,
+          createdAt: new Date().toISOString(),
+        };
+        setPlatformTransactions((prev) => [ptx, ...prev]);
+
+        addToast(
+          'success',
+          'Descarga Exitosa',
+          `Se descargaron $${params.amount.toLocaleString('es-CO')} de ${platform.name} ingresando a la caja física.`
+        );
+        return true;
+      }
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  // Set / Mount Initial Cash Balance & Platform balances
   const setInitialCashBalance = async (params: {
     amount: number;
     mode?: 'set_base' | 'adjust_capital';
     reason?: string;
+    platformBalances?: { platformId: string; balance: number }[];
   }): Promise<boolean> => {
     if (params.amount < 0 || isNaN(params.amount)) {
       addToast('error', 'Monto inválido', 'El saldo inicial no puede ser un valor negativo.');
@@ -805,6 +1131,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setIsProcessing(true);
     try {
+      // 1. Update platform balances if provided
+      if (params.platformBalances && params.platformBalances.length > 0) {
+        for (const pb of params.platformBalances) {
+          if (!isNaN(pb.balance) && pb.balance >= 0) {
+            setPlatforms((prev) =>
+              prev.map((p) =>
+                p.id === pb.platformId
+                  ? { ...p, currentBalance: pb.balance, initialBalance: pb.balance, lastUpdated: new Date().toISOString() }
+                  : p
+              )
+            );
+          }
+        }
+      }
+
       if (!currentRegister) {
         // If no open register, open one with this exact amount
         return await openCashRegister(params.amount);
@@ -844,8 +1185,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
         addToast(
           'success',
-          'Saldo Base Establecido',
-          `Se configuró $${params.amount.toLocaleString('es-CO')} como saldo inicial de la caja activa.`
+          'Saldos Actualizados',
+          `Se configuró el dinero inicial en caja física ($${params.amount.toLocaleString('es-CO')}) y plataformas digitales.`
         );
         return true;
       }
@@ -910,6 +1251,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUsers(INITIAL_USERS);
     setCurrentUser(INITIAL_USERS[0]);
     setServices(INITIAL_SERVICES);
+    setPlatforms(INITIAL_PLATFORMS);
+    setPlatformTransactions(INITIAL_PLATFORM_TRANSACTIONS);
     setCategories(INITIAL_CATEGORIES);
     setCashRegisters(INITIAL_CASH_REGISTERS);
     setLoans(INITIAL_LOANS);
@@ -925,12 +1268,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setLoans([]);
     setCashRegisters([]);
     setAuditLogs([]);
+    setPlatformTransactions([]);
     addToast('warning', 'Datos Limpiados', 'Se han limpiado todas las transacciones y registros de caja.');
   };
 
   return (
     <AppContext.Provider
       value={{
+        isAuthenticated,
+        login,
+        logout,
         currentUser,
         setCurrentUser,
         switchUserRole,
@@ -938,6 +1285,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         services,
         categories,
         paymentMethods,
+        platforms,
+        platformTransactions,
         cashRegisters,
         currentRegister,
         transactions,
@@ -960,6 +1309,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateService,
         deleteService,
         toggleServiceActive,
+        addPlatform,
+        updatePlatform,
+        deletePlatform,
+        togglePlatformActive,
+        adjustPlatformBalance,
+        transferBetweenCashAndPlatform,
         setInitialCashBalance,
         addCategory,
         updateCategory,

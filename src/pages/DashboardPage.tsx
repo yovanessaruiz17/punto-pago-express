@@ -26,6 +26,9 @@ import {
   Sparkles,
   Layers,
   Coins,
+  Smartphone,
+  ExternalLink,
+  RefreshCw,
 } from 'lucide-react';
 import { NavTab } from '../components/layout/Sidebar';
 
@@ -50,7 +53,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onOpenCloseCashModal,
   onOpenSetInitialCash,
 }) => {
-  const { summary, currentRegister, cashRegisters, transactions, loans, settings } = useApp();
+  const { summary, currentRegister, cashRegisters, transactions, loans, platforms, settings } = useApp();
   const [selectedReceiptTx, setSelectedReceiptTx] = useState<Transaction | null>(null);
   const [selectedVoidTx, setSelectedVoidTx] = useState<Transaction | null>(null);
 
@@ -76,7 +79,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <div>
               <h3 className="text-base font-bold text-rose-900">La caja se encuentra cerrada</h3>
               <p className="text-xs text-rose-700 mt-0.5">
-                Debes abrir la caja o montar la cantidad de dinero inicial que tienes en físico para iniciar operaciones.
+                Debes abrir la caja o montar la cantidad de dinero inicial que tienes en físico y plataformas para iniciar operaciones.
               </p>
             </div>
           </div>
@@ -85,7 +88,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <button
                 type="button"
                 onClick={onOpenSetInitialCash}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black shadow-xs active:scale-95 transition-all"
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black shadow-xs active:scale-95 transition-all cursor-pointer"
               >
                 <Coins className="w-4 h-4" />
                 Montar Dinero Actual
@@ -94,7 +97,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <button
               type="button"
               onClick={onOpenOpenCashModal}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all cursor-pointer"
             >
               <LockOpen className="w-4 h-4" />
               Abrir Caja
@@ -115,7 +118,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-300 mt-0.5">
-                Abierta por {currentRegister.openedByUserName} • Base inicial: {formatCOP(currentRegister.initialBalance)}
+                Abierta por {currentRegister.openedByUserName} • Base inicial física: {formatCOP(currentRegister.initialBalance)}
               </p>
             </div>
           </div>
@@ -125,16 +128,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <button
                 type="button"
                 onClick={onOpenSetInitialCash}
-                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-300 text-xs font-bold transition-all active:scale-95"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-300 text-xs font-bold transition-all active:scale-95 cursor-pointer"
               >
                 <Coins className="w-3.5 h-3.5 text-amber-400" />
-                <span>Ajustar Dinero Inicial</span>
+                <span>Montar / Ajustar Dinero</span>
               </button>
             )}
             <button
               type="button"
               onClick={onOpenCloseCashModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold transition-all active:scale-95"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 text-white text-xs font-bold transition-all active:scale-95 cursor-pointer"
             >
               <Lock className="w-4 h-4 text-rose-400" />
               Arqueo y Cierre Diario
@@ -143,21 +146,100 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
         </div>
       )}
 
+      {/* Global Liquidity & Digital Platforms Strip */}
+      <div className="p-4 sm:p-5 rounded-3xl bg-white border border-slate-200/90 shadow-2xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-teal-50 text-teal-700 flex items-center justify-center font-black text-xs">
+              <Layers className="w-4 h-4" />
+            </div>
+            <div>
+              <h3 className="text-sm font-extrabold text-slate-900">
+                Saldos en Plataformas Digitales & Liquidez Global
+              </h3>
+              <p className="text-[11px] text-slate-500 font-medium">
+                PTM, Bemovil, Punto de Pago y efectivo en caja
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onNavigate('plataformas')}
+              className="text-xs font-bold text-teal-700 hover:text-teal-900 hover:underline inline-flex items-center gap-1 cursor-pointer"
+            >
+              <span>Gestionar Plataformas</span>
+              <ExternalLink className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+          {/* Liquidez Global Consolidada */}
+          <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/80 text-emerald-950">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 block">
+              Gran Total Liquidez
+            </span>
+            <p className="text-xl font-black text-emerald-900 mt-0.5">
+              {formatCOP(summary.totalGlobalLiquidity)}
+            </p>
+            <p className="text-[10px] text-emerald-800/80 mt-0.5 font-medium">
+              Caja ({formatCOP(summary.expectedCashInRegister)}) + Plataformas ({formatCOP(summary.totalPlatformsBalance)})
+            </p>
+          </div>
+
+          {/* Individual Platform mini-cards */}
+          {platforms.filter(p => p.isActive).slice(0, 3).map((plat) => {
+            const isPtm = plat.code === 'ptm';
+            const isBemovil = plat.code === 'bemovil';
+            return (
+              <div
+                key={plat.id}
+                className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200/80 hover:bg-slate-100/80 transition-colors flex flex-col justify-between"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-extrabold text-slate-800 truncate">
+                    {plat.name}
+                  </span>
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      isPtm ? 'bg-blue-500' : isBemovil ? 'bg-amber-500' : 'bg-emerald-500'
+                    }`}
+                  />
+                </div>
+                <p className="text-base font-black text-slate-900 mt-1">
+                  {formatCOP(plat.currentBalance)}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onNavigate('plataformas')}
+                  className="text-[10px] font-bold text-teal-700 hover:text-teal-900 mt-1 flex items-center gap-1 cursor-pointer"
+                >
+                  <span>Recargar / Transferir</span>
+                  <ArrowDownLeft className="w-2.5 h-2.5" />
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Main KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {/* 1. Dinero Disponible en Caja */}
         <StatCard
           id="stat-available-cash"
-          title="Dinero Disponible en Caja"
-          amount={summary.availableLiquidity}
-          subtitle="Saldo Físico + Bancario Estimado"
+          title="Efectivo en Caja Física"
+          amount={summary.expectedCashInRegister}
+          subtitle="Saldo real en gaveta física"
           icon={Wallet}
           variant="indigo"
           isLarge
-          badge="Liquidez"
+          badge="Caja Activa"
         />
 
-        {/* 2. Ganancia Operativa del Día (Distinct from loans!) */}
+        {/* 2. Ganancia Operativa del Día */}
         <StatCard
           id="stat-operating-profit"
           title="Ganancia Neta del Día"
@@ -201,16 +283,15 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           badge="Activo"
         />
 
-        {/* 6. Variación de Liquidez */}
+        {/* 6. Total Plataformas */}
         <StatCard
-          id="stat-liquidity-variation"
-          title="Variación de Liquidez"
-          amount={summary.liquidityVariation}
-          subtitle={`Respecto a la base inicial (${summary.liquidityVariationPercentage.toFixed(1)}%)`}
-          icon={TrendingUp}
+          id="stat-platforms-total"
+          title="Total en Plataformas Digitales"
+          amount={summary.totalPlatformsBalance}
+          subtitle="PTM, Bemovil, Punto de Pago..."
+          icon={Smartphone}
           variant="neutral"
-          badge={`${summary.liquidityVariationPercentage >= 0 ? '+' : ''}${summary.liquidityVariationPercentage.toFixed(1)}%`}
-          badgeType={summary.liquidityVariationPercentage >= 0 ? 'positive' : 'negative'}
+          badge={`${platforms.length} Apps`}
         />
       </div>
 
@@ -225,7 +306,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             type="button"
             onClick={onOpenQuickIncome}
             disabled={!currentRegister}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-emerald-500 hover:bg-emerald-50/40 active:scale-95 transition-all text-center group disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-emerald-500 hover:bg-emerald-50/40 active:scale-95 transition-all text-center group disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
               <ArrowDownLeft className="w-5 h-5" />
@@ -239,7 +320,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             type="button"
             onClick={onOpenQuickExpense}
             disabled={!currentRegister}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-rose-500 hover:bg-rose-50/40 active:scale-95 transition-all text-center group disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-rose-500 hover:bg-rose-50/40 active:scale-95 transition-all text-center group disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
             <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
               <ArrowUpRight className="w-5 h-5" />
@@ -248,14 +329,27 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <span className="text-[10px] text-slate-400">Gastos / Compras</span>
           </button>
 
+          {/* Plataformas Digitales */}
+          <button
+            type="button"
+            onClick={() => onNavigate('plataformas')}
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-teal-500 hover:bg-teal-50/40 active:scale-95 transition-all text-center group cursor-pointer"
+          >
+            <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+              <Layers className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-slate-800">📱 Plataformas</span>
+            <span className="text-[10px] text-slate-400">PTM, Bemovil, Pago</span>
+          </button>
+
           {/* Catálogo de Servicios */}
           <button
             type="button"
             onClick={() => onNavigate('servicios')}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-teal-500 hover:bg-teal-50/40 active:scale-95 transition-all text-center group"
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-indigo-500 hover:bg-indigo-50/40 active:scale-95 transition-all text-center group cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-              <Layers className="w-5 h-5" />
+            <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+              <Sparkles className="w-5 h-5" />
             </div>
             <span className="text-xs font-bold text-slate-800">⚡ Servicios</span>
             <span className="text-[10px] text-slate-400">Crear & Gestionar</span>
@@ -265,7 +359,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           <button
             type="button"
             onClick={onOpenSetInitialCash ? onOpenSetInitialCash : onOpenOpenCashModal}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-amber-500 hover:bg-amber-50/40 active:scale-95 transition-all text-center group"
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-amber-500 hover:bg-amber-50/40 active:scale-95 transition-all text-center group cursor-pointer"
           >
             <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
               <Coins className="w-5 h-5" />
@@ -279,28 +373,13 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             type="button"
             onClick={onOpenQuickLoan}
             disabled={!currentRegister}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-indigo-500 hover:bg-indigo-50/40 active:scale-95 transition-all text-center group disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-purple-500 hover:bg-purple-50/40 active:scale-95 transition-all text-center group disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer"
           >
-            <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+            <div className="w-10 h-10 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
               <HandCoins className="w-5 h-5" />
             </div>
             <span className="text-xs font-bold text-slate-800">🤝 Préstamos</span>
             <span className="text-[10px] text-slate-400">Recibir o Entregar</span>
-          </button>
-
-          {/* Caja / Cierre */}
-          <button
-            type="button"
-            onClick={currentRegister ? onOpenCloseCashModal : onOpenOpenCashModal}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-slate-800 hover:bg-slate-50 active:scale-95 transition-all text-center group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-800 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-              {currentRegister ? <Lock className="w-5 h-5" /> : <LockOpen className="w-5 h-5" />}
-            </div>
-            <span className="text-xs font-bold text-slate-800">
-              {currentRegister ? '🔒 Cerrar Caja' : '🔓 Abrir Caja'}
-            </span>
-            <span className="text-[10px] text-slate-400">Arqueo y Cuadre</span>
           </button>
         </div>
       </div>
@@ -316,7 +395,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('caja')}
-              className="text-xs font-semibold text-emerald-600 hover:underline"
+              className="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer"
             >
               Ver todos
             </button>
@@ -401,7 +480,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <button
                 type="button"
                 onClick={() => onNavigate('prestamos')}
-                className="font-bold text-amber-900 hover:underline inline-block"
+                className="font-bold text-amber-900 hover:underline inline-block cursor-pointer"
               >
                 Revisar cartera de préstamos →
               </button>
@@ -418,7 +497,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <button
               type="button"
               onClick={() => onNavigate('movimientos')}
-              className="text-xs font-semibold text-emerald-600 hover:underline"
+              className="text-xs font-semibold text-emerald-600 hover:underline cursor-pointer"
             >
               Ver todos ({transactions.length})
             </button>
@@ -496,7 +575,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                         <button
                           type="button"
                           onClick={() => setSelectedReceiptTx(tx)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                          className="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
                           title="Ver comprobante"
                         >
                           <Eye className="w-3.5 h-3.5" />
@@ -505,7 +584,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
                           <button
                             type="button"
                             onClick={() => setSelectedVoidTx(tx)}
-                            className="p-1.5 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors"
+                            className="p-1.5 rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-colors cursor-pointer"
                             title="Anular movimiento"
                           >
                             <Ban className="w-3.5 h-3.5" />

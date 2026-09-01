@@ -11,8 +11,10 @@ import { BottomNav } from './components/layout/BottomNav';
 import { ToastContainer } from './components/ui/ToastContainer';
 
 // Pages
+import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { ServicesPage } from './pages/ServicesPage';
+import { PlatformsPage } from './pages/PlatformsPage';
 import { IncomesPage } from './pages/IncomesPage';
 import { ExpensesPage } from './pages/ExpensesPage';
 import { LoansPage } from './pages/LoansPage';
@@ -34,10 +36,20 @@ import { SetInitialCashModal } from './components/modals/SetInitialCashModal';
 
 // Mobile Quick Action Menu Modal
 import { Modal } from './components/ui/Modal';
-import { ArrowDownLeft, ArrowUpRight, HandCoins, Lock, LockOpen, BarChart3, Layers, Coins } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, HandCoins, Lock, LockOpen, BarChart3, Layers, Coins, Smartphone } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
-  const { currentRegister } = useApp();
+  const { currentRegister, isAuthenticated } = useApp();
+
+  // If not logged in, render the login page
+  if (!isAuthenticated) {
+    return (
+      <>
+        <LoginPage />
+        <ToastContainer />
+      </>
+    );
+  }
 
   // Active View Tab
   const [currentTab, setCurrentTab] = useState<NavTab>('dashboard');
@@ -102,6 +114,8 @@ const MainAppContent: React.FC = () => {
               }}
             />
           )}
+
+          {currentTab === 'plataformas' && <PlatformsPage />}
 
           {currentTab === 'ingresos' && (
             <IncomesPage onOpenQuickIncome={() => setIsIncomeModalOpen(true)} />
@@ -185,13 +199,13 @@ const MainAppContent: React.FC = () => {
             type="button"
             onClick={() => {
               setIsMobileQuickMenuOpen(false);
-              setCurrentTab('servicios');
+              setCurrentTab('plataformas');
             }}
             className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-teal-50 text-teal-950 border border-teal-200 hover:bg-teal-100 transition-all text-center"
           >
-            <Layers className="w-5 h-5 text-teal-600 mb-1" />
-            <span className="text-xs font-bold">⚡ Servicios</span>
-            <span className="text-[10px] text-teal-700">Catálogo</span>
+            <Smartphone className="w-5 h-5 text-teal-600 mb-1" />
+            <span className="text-xs font-bold">📱 Plataformas</span>
+            <span className="text-[10px] text-teal-700">PTM, Bemovil</span>
           </button>
 
           <button

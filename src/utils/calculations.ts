@@ -3,6 +3,8 @@ import { Transaction, CashRegister, Loan, DenominationCount } from '../types';
 export interface FinancialSummary {
   availableLiquidity: number; // Total dinero disponible
   expectedCashInRegister: number; // Dinero esperado en la caja activa
+  totalPlatformsBalance: number; // Dinero en plataformas (PTM, Bemovil, Punto de Pago, etc.)
+  totalGlobalLiquidity: number; // Efectivo en caja + Dinero en plataformas
   todayIncomes: number; // Ingresos de hoy (servicios + otros operativos)
   todayExpenses: number; // Egresos de hoy
   todayOperatingProfit: number; // Ganancia neta operativa de hoy

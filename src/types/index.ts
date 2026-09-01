@@ -61,6 +61,39 @@ export type TransactionType =
   | 'cobro_prestamo' 
   | 'ajuste';
 
+export interface DigitalPlatform {
+  id: string;
+  name: string; // e.g. "PTM", "Bemovil", "Punto de Pago"
+  code: string;
+  accountNumber?: string;
+  currentBalance: number;
+  initialBalance: number;
+  portalUrl?: string;
+  category?: string;
+  commissionRate?: number;
+  colorTheme?: string;
+  color?: string;
+  icon?: string;
+  description?: string;
+  isActive: boolean;
+  lastUpdated: string;
+  createdAt: string;
+}
+
+export interface PlatformTransaction {
+  id: string;
+  platformId: string;
+  platformName: string;
+  type: 'carga_desde_caja' | 'descarga_a_caja' | 'ajuste_directo' | 'venta_servicio';
+  amount: number;
+  description: string;
+  reference?: string;
+  cashRegisterId?: string;
+  userId: string;
+  userName: string;
+  createdAt: string;
+}
+
 export interface Transaction {
   id: string;
   cashRegisterId: string;
@@ -70,6 +103,8 @@ export interface Transaction {
   categoryName?: string;
   serviceId?: string;
   serviceName?: string;
+  platformId?: string;
+  platformName?: string;
   description: string;
   amount: number; // Integer in COP (e.g. 50000)
   paymentMethodCode: PaymentMethodCode;
@@ -150,7 +185,7 @@ export interface AuditLog {
   userName: string;
   userRole: UserRole;
   action: 'create' | 'update' | 'void' | 'open_cash' | 'close_cash' | 'reopen_cash' | 'login' | 'config_change';
-  entity: 'transaction' | 'cash_register' | 'loan' | 'loan_payment' | 'service' | 'category' | 'user' | 'settings';
+  entity: 'transaction' | 'cash_register' | 'loan' | 'loan_payment' | 'service' | 'category' | 'platform' | 'user' | 'settings';
   entityId: string;
   details: string;
   oldData?: Record<string, unknown>;

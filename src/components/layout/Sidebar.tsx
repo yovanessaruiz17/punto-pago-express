@@ -15,11 +15,14 @@ import {
   Building2,
   Sparkles,
   Layers,
+  LogOut,
+  Smartphone,
 } from 'lucide-react';
 
 export type NavTab =
   | 'dashboard'
   | 'servicios'
+  | 'plataformas'
   | 'ingresos'
   | 'egresos'
   | 'prestamos'
@@ -43,11 +46,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   isOpenMobile,
   onCloseMobile,
 }) => {
-  const { currentUser, settings } = useApp();
+  const { currentUser, settings, platforms, logout } = useApp();
 
   const navItems = [
     { id: 'dashboard' as NavTab, label: 'Dashboard', icon: LayoutDashboard, role: 'all' },
     { id: 'servicios' as NavTab, label: 'Servicios & Recaudos', icon: Layers, role: 'all', badge: 'Catálogo' },
+    { id: 'plataformas' as NavTab, label: 'Plataformas Digitales', icon: Smartphone, role: 'all', badge: `${platforms.length} Apps` },
     { id: 'ingresos' as NavTab, label: 'Ingresos', icon: ArrowDownLeft, role: 'all' },
     { id: 'egresos' as NavTab, label: 'Egresos', icon: ArrowUpRight, role: 'all' },
     { id: 'prestamos' as NavTab, label: 'Préstamos', icon: HandCoins, role: 'all' },
@@ -156,18 +160,29 @@ export const Sidebar: React.FC<SidebarProps> = ({
           })}
         </div>
 
-        {/* User Card at bottom */}
-        <div className="p-3 border-t border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-3 p-2 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
-            <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
-              {currentUser.name.charAt(0)}
+        {/* User Card & Logout at bottom */}
+        <div className="p-3 border-t border-slate-100 bg-slate-50/50 space-y-2">
+          <div className="flex items-center justify-between p-2 rounded-xl bg-white border border-slate-200/80 shadow-2xs">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-slate-900 text-white flex items-center justify-center font-bold text-xs shrink-0">
+                {currentUser.name.charAt(0)}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
+                <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                  {currentUser.role === 'admin' ? '🛡️ Admin' : '💼 Cajero'}
+                </p>
+              </div>
             </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-xs font-bold text-slate-900 truncate">{currentUser.name}</p>
-              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                {currentUser.role === 'admin' ? '🛡️ Administrador' : '💼 Cajero'}
-              </p>
-            </div>
+
+            <button
+              type="button"
+              onClick={logout}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              title="Cerrar sesión"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
           </div>
         </div>
       </aside>
