@@ -1,0 +1,6 @@
+{
+  "name": "Punto de Pago Express",
+  "description": "Sistema profesional de control de caja, flujo financiero, préstamos y cierres diarios para puntos de pago y corresponsales.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
