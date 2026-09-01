@@ -12,6 +12,7 @@ import { ToastContainer } from './components/ui/ToastContainer';
 
 // Pages
 import { DashboardPage } from './pages/DashboardPage';
+import { ServicesPage } from './pages/ServicesPage';
 import { IncomesPage } from './pages/IncomesPage';
 import { ExpensesPage } from './pages/ExpensesPage';
 import { LoansPage } from './pages/LoansPage';
@@ -29,10 +30,11 @@ import { QuickLoanModal } from './components/modals/QuickLoanModal';
 import { QuickLoanPaymentModal } from './components/modals/QuickLoanPaymentModal';
 import { OpenCashModal } from './components/modals/OpenCashModal';
 import { CloseCashModal } from './components/modals/CloseCashModal';
+import { SetInitialCashModal } from './components/modals/SetInitialCashModal';
 
 // Mobile Quick Action Menu Modal
 import { Modal } from './components/ui/Modal';
-import { ArrowDownLeft, ArrowUpRight, HandCoins, Lock, LockOpen, BarChart3 } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight, HandCoins, Lock, LockOpen, BarChart3, Layers, Coins } from 'lucide-react';
 
 const MainAppContent: React.FC = () => {
   const { currentRegister } = useApp();
@@ -49,6 +51,7 @@ const MainAppContent: React.FC = () => {
   const [isLoanPaymentModalOpen, setIsLoanPaymentModalOpen] = useState<boolean>(false);
   const [isOpenCashModalOpen, setIsOpenCashModalOpen] = useState<boolean>(false);
   const [isCloseCashModalOpen, setIsCloseCashModalOpen] = useState<boolean>(false);
+  const [isSetInitialCashModalOpen, setIsSetInitialCashModalOpen] = useState<boolean>(false);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900 selection:bg-emerald-500 selection:text-white flex flex-col antialiased">
@@ -67,6 +70,7 @@ const MainAppContent: React.FC = () => {
           onOpenMobileMenu={() => setIsMobileSidebarOpen(true)}
           onOpenQuickIncome={() => setIsIncomeModalOpen(true)}
           onOpenQuickExpense={() => setIsExpenseModalOpen(true)}
+          onOpenSetInitialCash={() => setIsSetInitialCashModalOpen(true)}
           onOpenCashModal={() => {
             if (currentRegister) {
               setIsCloseCashModalOpen(true);
@@ -87,6 +91,15 @@ const MainAppContent: React.FC = () => {
               onOpenQuickLoanPayment={() => setIsLoanPaymentModalOpen(true)}
               onOpenOpenCashModal={() => setIsOpenCashModalOpen(true)}
               onOpenCloseCashModal={() => setIsCloseCashModalOpen(true)}
+              onOpenSetInitialCash={() => setIsSetInitialCashModalOpen(true)}
+            />
+          )}
+
+          {currentTab === 'servicios' && (
+            <ServicesPage
+              onOpenQuickIncomeWithService={() => {
+                setIsIncomeModalOpen(true);
+              }}
             />
           )}
 
@@ -109,6 +122,7 @@ const MainAppContent: React.FC = () => {
             <CashPage
               onOpenOpenCashModal={() => setIsOpenCashModalOpen(true)}
               onOpenCloseCashModal={() => setIsCloseCashModalOpen(true)}
+              onOpenSetInitialCash={() => setIsSetInitialCashModalOpen(true)}
             />
           )}
 
@@ -146,11 +160,11 @@ const MainAppContent: React.FC = () => {
               setIsIncomeModalOpen(true);
             }}
             disabled={!currentRegister}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-emerald-50 text-emerald-950 border border-emerald-200 hover:bg-emerald-100 transition-all text-center disabled:opacity-40"
+            className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-emerald-50 text-emerald-950 border border-emerald-200 hover:bg-emerald-100 transition-all text-center disabled:opacity-40"
           >
-            <ArrowDownLeft className="w-6 h-6 text-emerald-600 mb-1" />
+            <ArrowDownLeft className="w-5 h-5 text-emerald-600 mb-1" />
             <span className="text-xs font-bold">➕ Ingreso</span>
-            <span className="text-[10px] text-emerald-700">Servicios/Recaudos</span>
+            <span className="text-[10px] text-emerald-700">Recaudo</span>
           </button>
 
           <button
@@ -160,39 +174,37 @@ const MainAppContent: React.FC = () => {
               setIsExpenseModalOpen(true);
             }}
             disabled={!currentRegister}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-rose-50 text-rose-950 border border-rose-200 hover:bg-rose-100 transition-all text-center disabled:opacity-40"
+            className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-rose-50 text-rose-950 border border-rose-200 hover:bg-rose-100 transition-all text-center disabled:opacity-40"
           >
-            <ArrowUpRight className="w-6 h-6 text-rose-600 mb-1" />
+            <ArrowUpRight className="w-5 h-5 text-rose-600 mb-1" />
             <span className="text-xs font-bold">➖ Egreso</span>
-            <span className="text-[10px] text-rose-700">Gastos/Compras</span>
+            <span className="text-[10px] text-rose-700">Gastos</span>
           </button>
 
           <button
             type="button"
             onClick={() => {
               setIsMobileQuickMenuOpen(false);
-              setIsLoanModalOpen(true);
+              setCurrentTab('servicios');
             }}
-            disabled={!currentRegister}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-indigo-50 text-indigo-950 border border-indigo-200 hover:bg-indigo-100 transition-all text-center disabled:opacity-40"
+            className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-teal-50 text-teal-950 border border-teal-200 hover:bg-teal-100 transition-all text-center"
           >
-            <HandCoins className="w-6 h-6 text-indigo-600 mb-1" />
-            <span className="text-xs font-bold">🤝 Préstamo</span>
-            <span className="text-[10px] text-indigo-700">Recibir/Prestar</span>
+            <Layers className="w-5 h-5 text-teal-600 mb-1" />
+            <span className="text-xs font-bold">⚡ Servicios</span>
+            <span className="text-[10px] text-teal-700">Catálogo</span>
           </button>
 
           <button
             type="button"
             onClick={() => {
               setIsMobileQuickMenuOpen(false);
-              setIsLoanPaymentModalOpen(true);
+              setIsSetInitialCashModalOpen(true);
             }}
-            disabled={!currentRegister}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-amber-50 text-amber-950 border border-amber-200 hover:bg-amber-100 transition-all text-center disabled:opacity-40"
+            className="flex flex-col items-center justify-center p-3.5 rounded-2xl bg-amber-50 text-amber-950 border border-amber-200 hover:bg-amber-100 transition-all text-center"
           >
-            <HandCoins className="w-6 h-6 text-amber-600 mb-1" />
-            <span className="text-xs font-bold">💵 Abono</span>
-            <span className="text-[10px] text-amber-700">Pagar/Cobrar</span>
+            <Coins className="w-5 h-5 text-amber-600 mb-1" />
+            <span className="text-xs font-bold">💵 Dinero Inicial</span>
+            <span className="text-[10px] text-amber-700">Montar Base</span>
           </button>
 
           <button
@@ -242,6 +254,11 @@ const MainAppContent: React.FC = () => {
       <CloseCashModal
         isOpen={isCloseCashModalOpen}
         onClose={() => setIsCloseCashModalOpen(false)}
+      />
+
+      <SetInitialCashModal
+        isOpen={isSetInitialCashModalOpen}
+        onClose={() => setIsSetInitialCashModalOpen(false)}
       />
 
       {/* Global Toast Notifications Container */}

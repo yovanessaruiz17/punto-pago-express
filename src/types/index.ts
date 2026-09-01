@@ -15,7 +15,13 @@ export interface ServiceItem {
   name: string;
   category: string;
   description: string;
+  code?: string;
+  commissionType?: 'fixed' | 'percentage' | 'none';
+  commissionAmount?: number;
+  commissionPercentage?: number;
   defaultPrice?: number;
+  color?: string;
+  icon?: string;
   isActive: boolean;
   createdAt: string;
 }

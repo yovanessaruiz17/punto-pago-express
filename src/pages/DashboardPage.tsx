@@ -24,6 +24,8 @@ import {
   Ban,
   Clock,
   Sparkles,
+  Layers,
+  Coins,
 } from 'lucide-react';
 import { NavTab } from '../components/layout/Sidebar';
 
@@ -35,6 +37,7 @@ interface DashboardPageProps {
   onOpenQuickLoanPayment: () => void;
   onOpenOpenCashModal: () => void;
   onOpenCloseCashModal: () => void;
+  onOpenSetInitialCash?: () => void;
 }
 
 export const DashboardPage: React.FC<DashboardPageProps> = ({
@@ -45,6 +48,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
   onOpenQuickLoanPayment,
   onOpenOpenCashModal,
   onOpenCloseCashModal,
+  onOpenSetInitialCash,
 }) => {
   const { summary, currentRegister, cashRegisters, transactions, loans, settings } = useApp();
   const [selectedReceiptTx, setSelectedReceiptTx] = useState<Transaction | null>(null);
@@ -72,18 +76,30 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <div>
               <h3 className="text-base font-bold text-rose-900">La caja se encuentra cerrada</h3>
               <p className="text-xs text-rose-700 mt-0.5">
-                Debes abrir la caja con un saldo base inicial antes de poder registrar servicios, ingresos o egresos.
+                Debes abrir la caja o montar la cantidad de dinero inicial que tienes en físico para iniciar operaciones.
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onOpenOpenCashModal}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
-          >
-            <LockOpen className="w-4 h-4" />
-            Abrir Caja Ahora
-          </button>
+          <div className="flex items-center gap-2">
+            {onOpenSetInitialCash && (
+              <button
+                type="button"
+                onClick={onOpenSetInitialCash}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 text-xs font-black shadow-xs active:scale-95 transition-all"
+              >
+                <Coins className="w-4 h-4" />
+                Montar Dinero Actual
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onOpenOpenCashModal}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-xs active:scale-95 transition-all"
+            >
+              <LockOpen className="w-4 h-4" />
+              Abrir Caja
+            </button>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 text-white shadow-md">
@@ -105,6 +121,16 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {onOpenSetInitialCash && (
+              <button
+                type="button"
+                onClick={onOpenSetInitialCash}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-amber-400/20 hover:bg-amber-400/30 border border-amber-400/40 text-amber-300 text-xs font-bold transition-all active:scale-95"
+              >
+                <Coins className="w-3.5 h-3.5 text-amber-400" />
+                <span>Ajustar Dinero Inicial</span>
+              </button>
+            )}
             <button
               type="button"
               onClick={onOpenCloseCashModal}
@@ -205,7 +231,7 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               <ArrowDownLeft className="w-5 h-5" />
             </div>
             <span className="text-xs font-bold text-slate-800">➕ Ingreso</span>
-            <span className="text-[10px] text-slate-400">Servicios / Recaudos</span>
+            <span className="text-[10px] text-slate-400">Recaudar Servicio</span>
           </button>
 
           {/* Egreso */}
@@ -222,6 +248,32 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <span className="text-[10px] text-slate-400">Gastos / Compras</span>
           </button>
 
+          {/* Catálogo de Servicios */}
+          <button
+            type="button"
+            onClick={() => onNavigate('servicios')}
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-teal-500 hover:bg-teal-50/40 active:scale-95 transition-all text-center group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+              <Layers className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-slate-800">⚡ Servicios</span>
+            <span className="text-[10px] text-slate-400">Crear & Gestionar</span>
+          </button>
+
+          {/* Montar Dinero / Base Inicial */}
+          <button
+            type="button"
+            onClick={onOpenSetInitialCash ? onOpenSetInitialCash : onOpenOpenCashModal}
+            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-amber-500 hover:bg-amber-50/40 active:scale-95 transition-all text-center group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+              <Coins className="w-5 h-5" />
+            </div>
+            <span className="text-xs font-bold text-slate-800">💵 Dinero Inicial</span>
+            <span className="text-[10px] text-slate-400">Montar / Ajustar</span>
+          </button>
+
           {/* Préstamo */}
           <button
             type="button"
@@ -232,22 +284,8 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
             <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
               <HandCoins className="w-5 h-5" />
             </div>
-            <span className="text-xs font-bold text-slate-800">🤝 Préstamo</span>
+            <span className="text-xs font-bold text-slate-800">🤝 Préstamos</span>
             <span className="text-[10px] text-slate-400">Recibir o Entregar</span>
-          </button>
-
-          {/* Devolución / Abono */}
-          <button
-            type="button"
-            onClick={onOpenQuickLoanPayment}
-            disabled={!currentRegister}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-amber-500 hover:bg-amber-50/40 active:scale-95 transition-all text-center group disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-              <HandCoins className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-slate-800">💵 Abono Préstamo</span>
-            <span className="text-[10px] text-slate-400">Pagar o Cobrar</span>
           </button>
 
           {/* Caja / Cierre */}
@@ -263,19 +301,6 @@ export const DashboardPage: React.FC<DashboardPageProps> = ({
               {currentRegister ? '🔒 Cerrar Caja' : '🔓 Abrir Caja'}
             </span>
             <span className="text-[10px] text-slate-400">Arqueo y Cuadre</span>
-          </button>
-
-          {/* Reportes */}
-          <button
-            type="button"
-            onClick={() => onNavigate('reportes')}
-            className="flex flex-col items-center justify-center p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs hover:border-blue-500 hover:bg-blue-50/40 active:scale-95 transition-all text-center group"
-          >
-            <div className="w-10 h-10 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-              <BarChart3 className="w-5 h-5" />
-            </div>
-            <span className="text-xs font-bold text-slate-800">📊 Reportes</span>
-            <span className="text-[10px] text-slate-400">Gráficos & Balance</span>
           </button>
         </div>
       </div>

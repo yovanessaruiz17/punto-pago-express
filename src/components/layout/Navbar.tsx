@@ -9,6 +9,7 @@ import {
   Sparkles,
   ShieldCheck,
   Menu,
+  Coins,
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -16,6 +17,7 @@ interface NavbarProps {
   onOpenQuickIncome: () => void;
   onOpenQuickExpense: () => void;
   onOpenCashModal: () => void;
+  onOpenSetInitialCash?: () => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -23,6 +25,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onOpenQuickIncome,
   onOpenQuickExpense,
   onOpenCashModal,
+  onOpenSetInitialCash,
 }) => {
   const { currentUser, switchUserRole, currentRegister, summary } = useApp();
 
@@ -84,6 +87,18 @@ export const Navbar: React.FC<NavbarProps> = ({
 
       {/* Right: Quick Action Buttons & Role Switcher */}
       <div className="flex items-center gap-2 sm:gap-3">
+        {onOpenSetInitialCash && (
+          <button
+            type="button"
+            onClick={onOpenSetInitialCash}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200/90 text-amber-900 text-xs font-extrabold shadow-2xs active:scale-95 transition-all"
+            title="Montar o definir cantidad de dinero inicial en caja"
+          >
+            <Coins className="w-3.5 h-3.5 text-amber-600" />
+            <span className="hidden sm:inline">Montar Dinero</span>
+          </button>
+        )}
+
         {/* Quick Transaction Action Buttons (Desktop) */}
         <div className="hidden md:flex items-center gap-1.5">
           <button

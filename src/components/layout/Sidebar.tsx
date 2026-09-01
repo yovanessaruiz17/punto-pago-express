@@ -14,10 +14,12 @@ import {
   X,
   Building2,
   Sparkles,
+  Layers,
 } from 'lucide-react';
 
 export type NavTab =
   | 'dashboard'
+  | 'servicios'
   | 'ingresos'
   | 'egresos'
   | 'prestamos'
@@ -45,7 +47,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems = [
     { id: 'dashboard' as NavTab, label: 'Dashboard', icon: LayoutDashboard, role: 'all' },
-    { id: 'ingresos' as NavTab, label: 'Ingresos', icon: ArrowDownLeft, role: 'all', badge: 'Servicios' },
+    { id: 'servicios' as NavTab, label: 'Servicios & Recaudos', icon: Layers, role: 'all', badge: 'Catálogo' },
+    { id: 'ingresos' as NavTab, label: 'Ingresos', icon: ArrowDownLeft, role: 'all' },
     { id: 'egresos' as NavTab, label: 'Egresos', icon: ArrowUpRight, role: 'all' },
     { id: 'prestamos' as NavTab, label: 'Préstamos', icon: HandCoins, role: 'all' },
     { id: 'caja' as NavTab, label: 'Caja & Cierres', icon: Wallet, role: 'all' },

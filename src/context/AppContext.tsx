@@ -94,7 +94,13 @@ interface AppContextType {
   // Configuration management
   addService: (service: Omit<ServiceItem, 'id' | 'createdAt'>) => void;
   updateService: (id: string, updates: Partial<ServiceItem>) => void;
+  deleteService: (id: string) => void;
   toggleServiceActive: (id: string) => void;
+  setInitialCashBalance: (params: {
+    amount: number;
+    mode?: 'set_base' | 'adjust_capital';
+    reason?: string;
+  }) => Promise<boolean>;
   
   addCategory: (category: Omit<CategoryItem, 'id' | 'createdAt'>) => void;
   updateCategory: (id: string, updates: Partial<CategoryItem>) => void;
@@ -770,12 +776,82 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     addToast('success', 'Servicio Actualizado', 'Los cambios fueron guardados.');
   };
 
+  const deleteService = (id: string) => {
+    const s = services.find((item) => item.id === id);
+    if (!s) return;
+    setServices((prev) => prev.filter((item) => item.id !== id));
+    logAudit('void', 'service', id, `Servicio eliminado del catálogo: ${s.name}`);
+    addToast('info', 'Servicio Eliminado', `El servicio "${s.name}" fue eliminado.`);
+  };
+
   const toggleServiceActive = (id: string) => {
     const s = services.find((item) => item.id === id);
     if (!s) return;
     const newState = !s.isActive;
     updateService(id, { isActive: newState });
     addToast('info', 'Estado Actualizado', `Servicio ${s.name} ${newState ? 'activado' : 'desactivado'}`);
+  };
+
+  // Set / Mount Initial Cash Balance
+  const setInitialCashBalance = async (params: {
+    amount: number;
+    mode?: 'set_base' | 'adjust_capital';
+    reason?: string;
+  }): Promise<boolean> => {
+    if (params.amount < 0 || isNaN(params.amount)) {
+      addToast('error', 'Monto inválido', 'El saldo inicial no puede ser un valor negativo.');
+      return false;
+    }
+
+    setIsProcessing(true);
+    try {
+      if (!currentRegister) {
+        // If no open register, open one with this exact amount
+        return await openCashRegister(params.amount);
+      }
+
+      if (params.mode === 'adjust_capital') {
+        // Create an 'ajuste' transaction
+        await createTransaction({
+          type: 'ajuste',
+          amount: params.amount,
+          paymentMethodCode: 'efectivo',
+          description: `Ajuste / Inyección de Capital a la Caja: ${params.reason || 'Carga de dinero actual'}`,
+        });
+        logAudit('create', 'transaction', currentRegister.id, `Inyección de capital de $${params.amount.toLocaleString('es-CO')} en caja activa.`);
+        addToast('success', 'Capital Inyectado', `Se agregaron $${params.amount.toLocaleString('es-CO')} a la caja activa.`);
+        return true;
+      } else {
+        // Directly update the active register's initialBalance
+        const oldInitial = currentRegister.initialBalance;
+        const updatedRegister: CashRegister = {
+          ...currentRegister,
+          initialBalance: params.amount,
+        };
+
+        setCashRegisters((prev) =>
+          prev.map((r) => (r.id === currentRegister.id ? updatedRegister : r))
+        );
+
+        logAudit(
+          'config_change',
+          'cash_register',
+          currentRegister.id,
+          `Modificación del Saldo Inicial de Caja: De $${oldInitial.toLocaleString('es-CO')} a $${params.amount.toLocaleString('es-CO')}. Motivo: ${params.reason || 'Configuración de dinero actual'}`,
+          { initialBalance: oldInitial },
+          { initialBalance: params.amount, reason: params.reason }
+        );
+
+        addToast(
+          'success',
+          'Saldo Base Establecido',
+          `Se configuró $${params.amount.toLocaleString('es-CO')} como saldo inicial de la caja activa.`
+        );
+        return true;
+      }
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Categories Management
@@ -882,7 +958,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         registerLoanPayment,
         addService,
         updateService,
+        deleteService,
         toggleServiceActive,
+        setInitialCashBalance,
         addCategory,
         updateCategory,
         toggleCategoryActive,

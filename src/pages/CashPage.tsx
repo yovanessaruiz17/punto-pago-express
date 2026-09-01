@@ -19,16 +19,19 @@ import {
   Info,
   ArrowDownLeft,
   ArrowUpRight,
+  Coins,
 } from 'lucide-react';
 
 interface CashPageProps {
   onOpenOpenCashModal: () => void;
   onOpenCloseCashModal: () => void;
+  onOpenSetInitialCash?: () => void;
 }
 
 export const CashPage: React.FC<CashPageProps> = ({
   onOpenOpenCashModal,
   onOpenCloseCashModal,
+  onOpenSetInitialCash,
 }) => {
   const { currentRegister, cashRegisters, transactions, summary, currentUser } = useApp();
   const [selectedRegisterForReopen, setSelectedRegisterForReopen] = useState<CashRegister | null>(null);
@@ -70,6 +73,17 @@ export const CashPage: React.FC<CashPageProps> = ({
         </div>
 
         <div className="flex items-center gap-2">
+          {onOpenSetInitialCash && (
+            <button
+              type="button"
+              onClick={onOpenSetInitialCash}
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold shadow-2xs active:scale-95 transition-all"
+            >
+              <Coins className="w-4 h-4 text-amber-600" />
+              <span>{currentRegister ? 'Ajustar Base Inicial' : 'Montar Dinero Actual'}</span>
+            </button>
+          )}
+
           {currentRegister ? (
             <button
               type="button"
