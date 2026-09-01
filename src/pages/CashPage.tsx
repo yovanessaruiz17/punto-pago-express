@@ -5,6 +5,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { OpenCashModal } from '../components/modals/OpenCashModal';
 import { CloseCashModal } from '../components/modals/CloseCashModal';
 import { ReopenCashModal } from '../components/modals/ReopenCashModal';
+import { CashRegisterDetailModal } from '../components/modals/CashRegisterDetailModal';
 import { CashRegister } from '../types';
 import { formatCOP, formatDateTime, formatDate, formatTime } from '../utils/formatters';
 import {
@@ -20,6 +21,8 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Coins,
+  Layers,
+  Eye,
 } from 'lucide-react';
 
 interface CashPageProps {
@@ -33,8 +36,9 @@ export const CashPage: React.FC<CashPageProps> = ({
   onOpenCloseCashModal,
   onOpenSetInitialCash,
 }) => {
-  const { currentRegister, cashRegisters, transactions, summary, currentUser } = useApp();
+  const { currentRegister, cashRegisters, transactions, platforms, summary, currentUser } = useApp();
   const [selectedRegisterForReopen, setSelectedRegisterForReopen] = useState<CashRegister | null>(null);
+  const [selectedRegisterForDetail, setSelectedRegisterForDetail] = useState<CashRegister | null>(null);
 
   // Active register breakdown
   const regTx = currentRegister
@@ -57,6 +61,9 @@ export const CashPage: React.FC<CashPageProps> = ({
     .filter((t) => t.type === 'prestamo_entregado')
     .reduce((sum, t) => sum + t.amount, 0);
 
+  const totalPlatformsBalance = platforms.reduce((sum, p) => sum + p.currentBalance, 0);
+  const totalGlobalLiquidity = (summary.expectedCashInRegister || 0) + totalPlatformsBalance;
+
   const closedRegisters = cashRegisters.filter((r) => r.status === 'closed');
 
   return (
@@ -68,7 +75,7 @@ export const CashPage: React.FC<CashPageProps> = ({
             Control de Caja, Arqueos & Cierres
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Conciliación de dinero físico contado contra saldo esperado por sistema
+            Conciliación de dinero físico en gaveta y saldos en plataformas digitales (PTM, Bemovil, Punto de Pago)
           </p>
         </div>
 
@@ -80,7 +87,7 @@ export const CashPage: React.FC<CashPageProps> = ({
               className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-bold shadow-2xs active:scale-95 transition-all"
             >
               <Coins className="w-4 h-4 text-amber-600" />
-              <span>{currentRegister ? 'Ajustar Base Inicial' : 'Montar Dinero Actual'}</span>
+              <span>{currentRegister ? 'Ajustar / Montar Dinero' : 'Montar Dinero Inicial'}</span>
             </button>
           )}
 
@@ -131,10 +138,13 @@ export const CashPage: React.FC<CashPageProps> = ({
 
             <div className="text-left sm:text-right">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">
-                Dinero Esperado en Caja
+                Gran Total Liquidez Global (Caja + Plataformas)
               </span>
               <span className="text-2xl font-black text-slate-900">
-                {formatCOP(summary.expectedCashInRegister)} COP
+                {formatCOP(totalGlobalLiquidity)} COP
+              </span>
+              <span className="text-[11px] text-slate-500 block font-medium">
+                Efectivo: <strong className="text-emerald-700">{formatCOP(summary.expectedCashInRegister)}</strong> • Plataformas: <strong className="text-teal-700">{formatCOP(totalPlatformsBalance)}</strong>
               </span>
             </div>
           </div>
@@ -142,7 +152,7 @@ export const CashPage: React.FC<CashPageProps> = ({
           {/* Formula Breakdown Cards */}
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
             <div className="p-3 rounded-xl bg-white border border-slate-200">
-              <span className="text-[10px] font-bold uppercase text-slate-400 block">1. Saldo Inicial</span>
+              <span className="text-[10px] font-bold uppercase text-slate-400 block">1. Saldo Inicial Físico</span>
               <span className="text-sm font-extrabold text-slate-800">{formatCOP(currentRegister.initialBalance)}</span>
             </div>
             <div className="p-3 rounded-xl bg-white border border-slate-200">
@@ -162,8 +172,29 @@ export const CashPage: React.FC<CashPageProps> = ({
               <span className="text-sm font-extrabold text-amber-700">{formatCOP(loansGiven)}</span>
             </div>
             <div className="p-3 rounded-xl bg-slate-900 text-white border border-slate-800">
-              <span className="text-[10px] font-bold uppercase text-slate-300 block">= Total Esperado</span>
+              <span className="text-[10px] font-bold uppercase text-slate-300 block">= Esperado en Gaveta</span>
               <span className="text-sm font-black text-emerald-400">{formatCOP(summary.expectedCashInRegister)}</span>
+            </div>
+          </div>
+
+          {/* Digital Platforms Breakdown Live Strip */}
+          <div className="pt-2 border-t border-emerald-200/60 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-teal-950">
+              <Layers className="w-4 h-4 text-teal-600" />
+              <span>Saldos Actuales en Plataformas ({platforms.length}):</span>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              {platforms.map((p) => (
+                <div
+                  key={p.id}
+                  className="px-2.5 py-1 rounded-lg bg-white border border-teal-200 text-xs font-semibold text-slate-800 flex items-center gap-1.5 shadow-2xs"
+                >
+                  <span className="w-2 h-2 rounded-full bg-teal-500" />
+                  <span>{p.name}:</span>
+                  <span className="font-extrabold text-teal-700">{formatCOP(p.currentBalance)}</span>
+                </div>
+              ))}
             </div>
           </div>
         </div>
@@ -215,8 +246,9 @@ export const CashPage: React.FC<CashPageProps> = ({
                     <th className="py-3 px-4 text-right">Esperado</th>
                     <th className="py-3 px-4 text-right">Físico Contado</th>
                     <th className="py-3 px-4 text-center">Diferencia</th>
+                    <th className="py-3 px-4">Plataformas</th>
                     <th className="py-3 px-4">Motivo / Notas</th>
-                    <th className="py-3 px-4 text-right">Acción</th>
+                    <th className="py-3 px-4 text-right">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -251,6 +283,15 @@ export const CashPage: React.FC<CashPageProps> = ({
                               : `🟢 Sobrante ${formatCOP(diff)}`}
                           </Badge>
                         </td>
+                        <td className="py-3 px-4 whitespace-nowrap text-[11px]">
+                          {reg.platformsClosing && reg.platformsClosing.length > 0 ? (
+                            <span className="text-teal-700 font-semibold">
+                              {reg.platformsClosing.length} plataformas conciliadas
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">N/A</span>
+                          )}
+                        </td>
                         <td className="py-3 px-4 max-w-xs truncate text-[11px] text-slate-500">
                           {reg.differenceReason ? (
                             <div>
@@ -264,17 +305,29 @@ export const CashPage: React.FC<CashPageProps> = ({
                           )}
                         </td>
                         <td className="py-3 px-4 text-right whitespace-nowrap">
-                          {currentUser.role === 'admin' && (
+                          <div className="flex items-center justify-end gap-1.5">
                             <button
                               type="button"
-                              onClick={() => setSelectedRegisterForReopen(reg)}
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all"
-                              title="Reabrir caja para correcciones"
+                              onClick={() => setSelectedRegisterForDetail(reg)}
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all"
+                              title="Ver detalle del cierre"
                             >
-                              <Unlock className="w-3.5 h-3.5 text-amber-600" />
-                              Reabrir
+                              <Eye className="w-3.5 h-3.5 text-slate-500" />
+                              Ver Detalle
                             </button>
-                          )}
+
+                            {currentUser.role === 'admin' && (
+                              <button
+                                type="button"
+                                onClick={() => setSelectedRegisterForReopen(reg)}
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-amber-800 bg-amber-50 hover:bg-amber-100 border border-amber-200 transition-all"
+                                title="Reabrir caja para correcciones"
+                              >
+                                <Unlock className="w-3.5 h-3.5 text-amber-600" />
+                                Reabrir
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -286,6 +339,13 @@ export const CashPage: React.FC<CashPageProps> = ({
         )}
       </div>
 
+      {/* Cash Register Detail Modal */}
+      <CashRegisterDetailModal
+        isOpen={Boolean(selectedRegisterForDetail)}
+        onClose={() => setSelectedRegisterForDetail(null)}
+        register={selectedRegisterForDetail}
+      />
+
       {/* Reopen Cash Modal */}
       <ReopenCashModal
         isOpen={Boolean(selectedRegisterForReopen)}
@@ -295,3 +355,4 @@ export const CashPage: React.FC<CashPageProps> = ({
     </div>
   );
 };
+

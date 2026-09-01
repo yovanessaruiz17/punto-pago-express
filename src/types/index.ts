@@ -125,6 +125,20 @@ export interface Transaction {
 
 export type CashRegisterStatus = 'open' | 'closed';
 
+export interface PlatformClosingSnapshot {
+  platformId: string;
+  platformName: string;
+  expectedBalance: number;
+  actualBalance: number;
+  difference: number;
+}
+
+export interface PlatformInitialSnapshot {
+  platformId: string;
+  platformName: string;
+  initialBalance: number;
+}
+
 export interface CashRegister {
   id: string;
   openedAt: string;
@@ -133,10 +147,20 @@ export interface CashRegister {
   openedByUserName: string;
   closedByUserId?: string;
   closedByUserName?: string;
-  initialBalance: number; // Saldo inicial en caja
-  expectedBalance: number; // Dinero esperado calculado por fórmula
+  initialBalance: number; // Saldo inicial en caja física
+  initialPlatformsBalances?: PlatformInitialSnapshot[];
+  totalInitialPlatforms?: number;
+  totalInitialGlobal?: number;
+  expectedBalance: number; // Dinero físico esperado
   physicalCountedBalance?: number; // Dinero físico contado en el arqueo
   difference?: number; // physical - expected
+  platformsClosingSnapshots?: PlatformClosingSnapshot[];
+  totalPlatformsExpected?: number;
+  totalPlatformsActual?: number;
+  totalPlatformsDifference?: number;
+  globalExpectedBalance?: number; // physical expected + platforms expected
+  globalActualBalance?: number; // physical counted + platforms actual
+  globalDifference?: number; // global actual - global expected
   differenceReason?: string;
   differenceNotes?: string;
   status: CashRegisterStatus;

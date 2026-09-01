@@ -15,6 +15,8 @@ import {
   PaymentMethodCode,
   DigitalPlatform,
   PlatformTransaction,
+  PlatformInitialSnapshot,
+  PlatformClosingSnapshot,
 } from '../types';
 import {
   INITIAL_USERS,
@@ -66,8 +68,16 @@ interface AppContextType {
   removeToast: (id: string) => void;
 
   // Actions
-  openCashRegister: (initialBalance: number) => Promise<boolean>;
-  closeCashRegister: (physicalBalance: number, reason?: string, notes?: string) => Promise<boolean>;
+  openCashRegister: (
+    initialBalance: number,
+    platformBalances?: { platformId: string; balance: number }[]
+  ) => Promise<boolean>;
+  closeCashRegister: (
+    physicalBalance: number,
+    platformsClosing?: { platformId: string; actualBalance: number }[],
+    reason?: string,
+    notes?: string
+  ) => Promise<boolean>;
   reopenCashRegister: (registerId: string, reason: string) => Promise<boolean>;
   
   createTransaction: (params: {
@@ -429,7 +439,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [users, addToast]);
 
   // Open Cash Register
-  const openCashRegister = async (initialBalance: number): Promise<boolean> => {
+  const openCashRegister = async (
+    initialBalance: number,
+    platformBalances?: { platformId: string; balance: number }[]
+  ): Promise<boolean> => {
     if (initialBalance < 0) {
       addToast('error', 'Error', 'El saldo inicial no puede ser negativo.');
       return false;
@@ -442,29 +455,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     setIsProcessing(true);
     try {
+      // 1. Update platform balances if provided
+      const platformSnapshots: PlatformInitialSnapshot[] = [];
+      let totalInitialPlatforms = 0;
+
+      if (platformBalances && platformBalances.length > 0) {
+        for (const pb of platformBalances) {
+          if (!isNaN(pb.balance) && pb.balance >= 0) {
+            setPlatforms((prev) =>
+              prev.map((p) =>
+                p.id === pb.platformId
+                  ? { ...p, currentBalance: pb.balance, initialBalance: pb.balance, lastUpdated: new Date().toISOString() }
+                  : p
+              )
+            );
+            const platObj = platforms.find((p) => p.id === pb.platformId);
+            platformSnapshots.push({
+              platformId: pb.platformId,
+              platformName: platObj?.name || pb.platformId,
+              initialBalance: pb.balance,
+            });
+            totalInitialPlatforms += pb.balance;
+          }
+        }
+      } else {
+        platforms.forEach((p) => {
+          platformSnapshots.push({
+            platformId: p.id,
+            platformName: p.name,
+            initialBalance: p.currentBalance,
+          });
+          totalInitialPlatforms += p.currentBalance;
+        });
+      }
+
+      const totalInitialGlobal = initialBalance + totalInitialPlatforms;
+
       const newRegister: CashRegister = {
         id: `reg-${Date.now()}`,
         openedAt: new Date().toISOString(),
         openedByUserId: currentUser.id,
         openedByUserName: currentUser.name,
         initialBalance,
+        initialPlatformsBalances: platformSnapshots,
+        totalInitialPlatforms,
+        totalInitialGlobal,
         expectedBalance: initialBalance,
         status: 'open',
         createdAt: new Date().toISOString(),
       };
 
       setCashRegisters((prev) => [newRegister, ...prev]);
-      logAudit('open_cash', 'cash_register', newRegister.id, `Apertura de caja con saldo inicial de $${initialBalance.toLocaleString('es-CO')}`, undefined, { initialBalance });
-      addToast('success', 'Caja abierta', 'La caja fue abierta exitosamente.');
+      logAudit(
+        'open_cash',
+        'cash_register',
+        newRegister.id,
+        `Apertura de caja con base física de $${initialBalance.toLocaleString('es-CO')} y $${totalInitialPlatforms.toLocaleString('es-CO')} en plataformas digitales. Gran Total Liquidez: $${totalInitialGlobal.toLocaleString('es-CO')}`,
+        undefined,
+        { initialBalance, totalInitialPlatforms, totalInitialGlobal }
+      );
+      addToast(
+        'success',
+        'Caja abierta con éxito',
+        `Iniciaste operaciones con $${initialBalance.toLocaleString('es-CO')} en gaveta y $${totalInitialPlatforms.toLocaleString('es-CO')} en plataformas digitales.`
+      );
       return true;
     } finally {
       setIsProcessing(false);
     }
   };
 
-  // Close Cash Register with Arqueo
+  // Close Cash Register with Arqueo & Platform Reconciliation
   const closeCashRegister = async (
     physicalBalance: number,
+    platformsClosing?: { platformId: string; actualBalance: number }[],
     differenceReason?: string,
     notes?: string
   ): Promise<boolean> => {
@@ -478,10 +542,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return false;
     }
 
-    const expected = liveExpectedBalance;
-    const difference = physicalBalance - expected;
+    const expectedCash = liveExpectedBalance;
+    const cashDifference = physicalBalance - expectedCash;
 
-    if (difference !== 0 && !differenceReason) {
+    // Platform closing snapshots
+    const closingSnapshots: PlatformClosingSnapshot[] = [];
+    let totalPlatformsExpected = 0;
+    let totalPlatformsActual = 0;
+
+    platforms.forEach((plat) => {
+      const expected = plat.currentBalance;
+      const actualObj = platformsClosing?.find((p) => p.platformId === plat.id);
+      const actual = actualObj !== undefined && !isNaN(actualObj.actualBalance) ? actualObj.actualBalance : expected;
+      const diff = actual - expected;
+
+      totalPlatformsExpected += expected;
+      totalPlatformsActual += actual;
+
+      closingSnapshots.push({
+        platformId: plat.id,
+        platformName: plat.name,
+        expectedBalance: expected,
+        actualBalance: actual,
+        difference: diff,
+      });
+    });
+
+    const totalPlatformsDifference = totalPlatformsActual - totalPlatformsExpected;
+    const globalExpectedBalance = expectedCash + totalPlatformsExpected;
+    const globalActualBalance = physicalBalance + totalPlatformsActual;
+    const globalDifference = globalActualBalance - globalExpectedBalance;
+
+    const hasAnyDifference = cashDifference !== 0 || totalPlatformsDifference !== 0 || globalDifference !== 0;
+
+    if (hasAnyDifference && !differenceReason) {
       addToast('warning', 'Justificación requerida', 'Debes seleccionar el motivo de la diferencia encontrada.');
       return false;
     }
@@ -489,14 +583,39 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setIsProcessing(true);
     try {
       const closedAt = new Date().toISOString();
+
+      // Update platform current balances to actual confirmed balances if any changed
+      if (platformsClosing && platformsClosing.length > 0) {
+        setPlatforms((prev) =>
+          prev.map((p) => {
+            const found = platformsClosing.find((item) => item.platformId === p.id);
+            if (found && !isNaN(found.actualBalance) && found.actualBalance !== p.currentBalance) {
+              return {
+                ...p,
+                currentBalance: found.actualBalance,
+                lastUpdated: closedAt,
+              };
+            }
+            return p;
+          })
+        );
+      }
+
       const updatedRegister: CashRegister = {
         ...currentRegister,
         closedAt,
         closedByUserId: currentUser.id,
         closedByUserName: currentUser.name,
-        expectedBalance: expected,
+        expectedBalance: expectedCash,
         physicalCountedBalance: physicalBalance,
-        difference,
+        difference: cashDifference,
+        platformsClosingSnapshots: closingSnapshots,
+        totalPlatformsExpected,
+        totalPlatformsActual,
+        totalPlatformsDifference,
+        globalExpectedBalance,
+        globalActualBalance,
+        globalDifference,
         differenceReason,
         differenceNotes: notes,
         status: 'closed',
@@ -510,17 +629,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         'close_cash',
         'cash_register',
         currentRegister.id,
-        `Cierre de caja. Esperado: $${expected.toLocaleString('es-CO')}, Contado: $${physicalBalance.toLocaleString('es-CO')}, Diferencia: $${difference.toLocaleString('es-CO')}`,
+        `Cierre de caja y plataformas. Físico: $${physicalBalance.toLocaleString('es-CO')} (Esp: $${expectedCash.toLocaleString('es-CO')}). Plataformas: $${totalPlatformsActual.toLocaleString('es-CO')} (Esp: $${totalPlatformsExpected.toLocaleString('es-CO')}). Gran Total: $${globalActualBalance.toLocaleString('es-CO')} (Esp: $${globalExpectedBalance.toLocaleString('es-CO')})`,
         { status: 'open' },
-        { status: 'closed', difference, differenceReason }
+        { status: 'closed', cashDifference, totalPlatformsDifference, globalDifference, differenceReason }
       );
 
-      if (difference === 0) {
-        addToast('success', 'Caja Cuadrada ✅', 'La caja cerró perfectamente sin diferencias.');
-      } else if (difference < 0) {
-        addToast('warning', 'Caja con Faltante 🔴', `Faltante de $${Math.abs(difference).toLocaleString('es-CO')}. Motivo: ${differenceReason}`);
+      if (globalDifference === 0 && cashDifference === 0) {
+        addToast('success', 'Caja y Plataformas Cuadradas ✅', 'El cierre concilió exactamente en efectivo físico y plataformas digitales.');
+      } else if (globalDifference < 0) {
+        addToast('warning', 'Cierre con Faltante Global 🔴', `Faltante global de $${Math.abs(globalDifference).toLocaleString('es-CO')}. Motivo: ${differenceReason}`);
       } else {
-        addToast('info', 'Caja con Sobrante 🟢', `Sobrante de $${difference.toLocaleString('es-CO')}. Motivo: ${differenceReason}`);
+        addToast('info', 'Cierre con Sobrante Global 🟢', `Sobrante global de $${globalDifference.toLocaleString('es-CO')}. Motivo: ${differenceReason}`);
       }
 
       return true;
