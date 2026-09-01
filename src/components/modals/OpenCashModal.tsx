@@ -14,7 +14,7 @@ const PRESETS = [200000, 300000, 500000, 1000000, 1500000, 2000000];
 
 export const OpenCashModal: React.FC<OpenCashModalProps> = ({ isOpen, onClose }) => {
   const { openCashRegister, platforms } = useApp();
-  const [initialBalance, setInitialBalance] = useState<number>(500000);
+  const [initialBalance, setInitialBalance] = useState<number>(0);
   const [platformBalancesState, setPlatformBalancesState] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useState<'all' | 'cash' | 'platforms'>('all');
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);

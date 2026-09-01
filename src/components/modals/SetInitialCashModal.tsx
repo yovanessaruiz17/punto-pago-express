@@ -52,7 +52,7 @@ export const SetInitialCashModal: React.FC<SetInitialCashModalProps> = ({
   const [totalCashAmount, setTotalCashAmount] = useState<number>(() => {
     if (defaultAmount !== undefined) return defaultAmount;
     if (currentRegister) return currentRegister.initialBalance;
-    return 1000000;
+    return 0;
   });
 
   const [platformBalancesState, setPlatformBalancesState] = useState<Record<string, number>>({});

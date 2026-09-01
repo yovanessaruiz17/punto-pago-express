@@ -154,19 +154,19 @@ interface AppContextType {
 }
 
 const STORAGE_KEYS = {
-  USERS: 'ppe_users_v1',
-  CURRENT_USER: 'ppe_current_user_v1',
-  AUTH_SESSION: 'ppe_auth_session_v1',
-  SERVICES: 'ppe_services_v1',
-  CATEGORIES: 'ppe_categories_v1',
-  PAYMENT_METHODS: 'ppe_payment_methods_v1',
-  PLATFORMS: 'ppe_platforms_v1',
-  PLATFORM_TXS: 'ppe_platform_txs_v1',
-  CASH_REGISTERS: 'ppe_cash_registers_v1',
-  TRANSACTIONS: 'ppe_transactions_v1',
-  LOANS: 'ppe_loans_v1',
-  AUDIT_LOGS: 'ppe_audit_logs_v1',
-  SETTINGS: 'ppe_settings_v1',
+  USERS: 'ppe_users_v2',
+  CURRENT_USER: 'ppe_current_user_v2',
+  AUTH_SESSION: 'ppe_auth_session_v2',
+  SERVICES: 'ppe_services_v2',
+  CATEGORIES: 'ppe_categories_v2',
+  PAYMENT_METHODS: 'ppe_payment_methods_v2',
+  PLATFORMS: 'ppe_platforms_v2',
+  PLATFORM_TXS: 'ppe_platform_txs_v2',
+  CASH_REGISTERS: 'ppe_cash_registers_v2',
+  TRANSACTIONS: 'ppe_transactions_v2',
+  LOANS: 'ppe_loans_v2',
+  AUDIT_LOGS: 'ppe_audit_logs_v2',
+  SETTINGS: 'ppe_settings_v2',
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -1388,7 +1388,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCashRegisters([]);
     setAuditLogs([]);
     setPlatformTransactions([]);
-    addToast('warning', 'Datos Limpiados', 'Se han limpiado todas las transacciones y registros de caja.');
+    setPlatforms((prev) => prev.map((p) => ({ ...p, currentBalance: 0, initialBalance: 0 })));
+    addToast('warning', 'Sistema en Cero', 'Se han limpiado todas las transacciones, préstamos y saldos a $0.');
   };
 
   return (
